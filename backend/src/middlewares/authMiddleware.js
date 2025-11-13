@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import pool from "../libs/db.js";
+import db from "../db/models/index.js";
 
 dotenv.config();
 
@@ -28,17 +28,18 @@ export const protectedRoute = (req, res, next) => {
         }
 
         // tìm user
-        let [results, fields] = await pool.query(
-          "select * from users where id = ?",
-          [decodeUser.userId]
-        );
+        let user = await db.User.findOne({
+          where: {
+            id: decodeUser.userId,
+          },
+        });
 
-        if (!results[0]) {
+        if (!user) {
           return res.status(404).json({ message: "Người dùng không tồn tại." });
         }
 
         // trả user về trong req
-        req.user = results[0];
+        req.user = user;
         next();
       }
     );

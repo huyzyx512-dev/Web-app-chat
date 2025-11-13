@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
-import pool from "../libs/db.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import db from "../db/models/index.js";
 
 dotenv.config();
 
@@ -20,12 +20,9 @@ export const signUp = async (req, res) => {
     }
 
     // Kiểm tra tài khoản tồn tại chưa
-    let [results, fields] = await pool.query(
-      "select * from users where username = ?",
-      [username]
-    );
+    const user = await db.User.findOne({ where: { username } });
 
-    if (results[0]) {
+    if (user) {
       return res.status(409).json({ message: "Username existed" });
     }
 
@@ -33,10 +30,13 @@ export const signUp = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10); // salt = 10
 
     // Tạo user mới
-    await pool.query(
-      "insert into users(username, hashedPassword, email, displayName) values (?,?,?,?)",
-      [username, hashedPassword, email, `${firstName} ${lastName}`]
-    );
+    const displayName = `${firstName} ${lastName}`;
+    await db.User.create({
+      userName: username,
+      password: hashedPassword,
+      email,
+      displayName,
+    });
     // return
     return res.sendStatus(204);
   } catch (error) {
@@ -53,30 +53,26 @@ export const signIn = async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ message: "Thiếu username hoặc password." });
     }
-    // Lấy hashPassword trong db so với password input
-    let [results, fields] = await pool.query(
-      "select * from users where username = ?",
-      [username]
-    );
 
-    if (!results[0]) {
+    // Lấy hashPassword trong db so với password input
+    let user = await db.User.findOne({ where: { username } });
+
+    if (!user) {
       return res
         .status(401)
         .json({ message: "username hoặc password không chính xác" });
     }
 
-    const passwordCorrect = await bcrypt.compare(
-      password,
-      results[0].hashedPassword
-    );
+    const passwordCorrect = await bcrypt.compare(password, user.password);
 
     if (!passwordCorrect)
       return res
         .status(401)
         .json({ message: "username hoặc password không chính xác." });
+
     // nếu khớp, tạo accessToken với JWT
     const accessToken = jwt.sign(
-      { userId: results[0].id },
+      { userId: user.id },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: ACCESS_TOKEN_TTL }
     );
@@ -85,11 +81,11 @@ export const signIn = async (req, res) => {
     const refreshToken = crypto.randomBytes(64).toString("hex");
 
     // tạo session mới để lưu refresh token
-    await pool.query("insert into sessions values(?,?,?)", [
-      results[0].id,
-      refreshToken,
-      new Date(Date.now() + REFRESH_TOKEN_TTL),
-    ]);
+    await db.Session.create({
+      userId: user.id,
+      refreshToken: refreshToken,
+      expireAt: new Date(Date.now() + REFRESH_TOKEN_TTL),
+    });
 
     // trả refresh token về trong cookie
     res.cookie("refreshToken", refreshToken, {
@@ -101,7 +97,7 @@ export const signIn = async (req, res) => {
 
     // trả access token về trong res
     return res.status(200).json({
-      message: `User ${results[0].displayName} đã logged in!`,
+      message: `User ${user.displayName} đã logged in!`,
       accessToken,
     });
   } catch (error) {
@@ -114,19 +110,21 @@ export const signOut = async (req, res) => {
   try {
     // Lấy token refresh token từ cookie
     const token = req.cookies?.refreshToken;
-
+    
     if (token) {
       // xóa refresh tokn trong Session
-      await pool.execute("DELETE FROM sessions WHERE refreshToken = ?", [
-        token,
-      ]);
+      await db.Session.destroy({
+        where: {
+          refreshToken: token,
+        },
+      });
       // Xóa cookie
       res.clearCookie("refreshToken");
     }
 
     return res.sendStatus(204);
   } catch (error) {
-    console.error("Lỗi khi gọi signIn", error);
+    console.error("Lỗi khi gọi signOut", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
@@ -141,11 +139,11 @@ export const refreshToken = async (req, res) => {
     }
 
     // so với refresh token trong db
-    const [results, fields] = await pool.query(
-      "select * from sessions where refreshToken = ?",
-      [token]
-    );
-    const session = results[0];
+    let session = await db.Session.findOne({
+      where: {
+        refreshToken: token,
+      },
+    });
 
     if (!session) {
       return res
