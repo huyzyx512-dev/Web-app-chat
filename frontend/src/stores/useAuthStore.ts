@@ -52,6 +52,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     try {
+      // call api
+      await authService.signOut();
+
       get().clearState();
 
       toast.success("Đăng xuất thành công.");

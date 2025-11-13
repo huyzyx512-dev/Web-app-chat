@@ -3,9 +3,10 @@ import { useAuthStore } from "@/stores/useAuthStore";
 
 const ChatAppPage = () => {
   const user = useAuthStore((s) => s.user);
+  console.log(user?.userName);
   return (
     <div>
-      {user?.username}
+      {user?.userName}
       <Logout />
     </div>
   );
