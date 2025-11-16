@@ -1,6 +1,9 @@
 'use strict';
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
+  /**
+   * Phương thức 'up' tạo bảng Users
+   */
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('Users', {
       id: {
@@ -10,31 +13,40 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       userName: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true // Dựa trên model, mặc định là true
       },
       password: {
-        type: Sequelize.TEXT
+        type: Sequelize.TEXT,
+        allowNull: true
       },
       email: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true
       },
       displayName: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true
       },
       avatarUrl: {
-        type: Sequelize.TEXT
+        type: Sequelize.TEXT,
+        allowNull: true
       },
       avatarId: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true
       },
       bio: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true
       },
       phone: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true
       },
       usersCol: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true
       },
       createdAt: {
         allowNull: false,
@@ -46,6 +58,10 @@ module.exports = {
       }
     });
   },
+
+  /**
+   * Phương thức 'down' xóa bảng Users
+   */
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('Users');
   }
