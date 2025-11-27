@@ -39,8 +39,6 @@ export const sendFriendRequest = async (req, res) => {
       return res.status(400).json({ message: "Hai người đã là bạn bè" });
     }
 
-    console.log("to ", to);
-    console.log("from ", from);
     const existedRequest = await db.FriendRequest.findOne({
       where: {
         [Op.or]: [
