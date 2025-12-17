@@ -121,7 +121,6 @@ export const sendDirectMessage = async (req, res) => {
       { transaction: t }
     );
 
-    console.log("Message: ", message);
     // === 5. Cập nhật conversation (lastMessage + unreadCounts + xóa seen) ===
     await updateConversationAfterCreateMessage(
       conversation,
@@ -161,4 +160,30 @@ export const sendDirectMessage = async (req, res) => {
     });
   }
 };
-export const sendGroupMessage = (req, res) => {};
+
+export const sendGroupMessage = async (req, res) => {
+  try {
+    const { conversationId, content } = req.body;
+    const senderId = req.user.id;
+    const conversation = req.conversation;
+
+    if (!content) {
+      return res.status(400).json("Thiếu nội dung");
+    }
+
+    const message = await db.Message.create({
+      conversationId,
+      senderId,
+      content: content.trim(),
+    });
+
+    updateConversationAfterCreateMessage(conversation, message, senderId);
+
+    await conversation.save();
+
+    return res.status(201).json({ message });
+  } catch (error) {
+    console.log("Lỗi xảy ra khi gửi tin nhắn nhóm", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};

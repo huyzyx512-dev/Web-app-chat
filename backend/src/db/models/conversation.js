@@ -14,12 +14,23 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "conversationId",
         as: "participants",
       });
+      Conversation.hasMany(models.Participant, {
+        foreignKey: "conversationId",
+        as: "allParticipants", // dùng để LẤY DATA
+      });
 
       // 4. Quan hệ cho 'lastMessage.senderId'
       // Tin nhắn cuối cùng thuộc về một User (người gửi)
       Conversation.belongsTo(models.User, {
         foreignKey: "lastMessageSenderId",
         as: "lastMessageSender",
+      });
+
+      // Nối với ConversationSeen
+      Conversation.hasMany(models.ConversationSeen, {
+        foreignKey: "conversationId", // Tên cột FK trong bảng ConversationSeen
+        as: "seenBy", // Alias để dùng khi include (tùy chọn nhưng khuyến khích)
+        onDelete: "CASCADE", // Tùy chọn: xóa conversation thì xóa luôn seen records
       });
     }
   }
