@@ -162,27 +162,56 @@ export const sendDirectMessage = async (req, res) => {
 };
 
 export const sendGroupMessage = async (req, res) => {
+  const t = await db.sequelize.transaction(); // ✅ mở transaction
+
   try {
     const { conversationId, content } = req.body;
     const senderId = req.user.id;
-    const conversation = req.conversation;
 
     if (!content) {
+      await t.rollback();
       return res.status(400).json("Thiếu nội dung");
     }
 
-    const message = await db.Message.create({
-      conversationId,
-      senderId,
-      content: content.trim(),
+    // 1. Tạo message
+    const message = await db.Message.create(
+      {
+        conversationId,
+        senderId,
+        content: content.trim(),
+      },
+      { transaction: t }
+    );
+
+    // 2. Lấy conversation
+    const conversation = await db.Conversation.findByPk(conversationId, {
+      transaction: t,
     });
 
-    updateConversationAfterCreateMessage(conversation, message, senderId);
+    if (!conversation) {
+      await t.rollback();
+      return res.status(404).json("Conversation không tồn tại");
+    }
 
-    await conversation.save();
+    // 3. Update conversation
+    await updateConversationAfterCreateMessage(
+      conversation,
+      message,
+      senderId,
+      {
+        transaction: t,
+        db,
+      }
+    );
+
+    await conversation.save({ transaction: t });
+
+    // 4. Commit
+    await t.commit();
 
     return res.status(201).json({ message });
   } catch (error) {
+    await t.rollback(); // ❌ lỗi → rollback
     console.log("Lỗi xảy ra khi gửi tin nhắn nhóm", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }

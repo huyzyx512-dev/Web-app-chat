@@ -1,4 +1,3 @@
-import { where } from "sequelize";
 import db from "../db/models/index.js";
 
 const pair = (a, b) => (a > b ? [b, a] : [a, b]);
@@ -63,8 +62,8 @@ export const checkGroupMembership = async (req, res, next) => {
     const { conversationId } = req.body;
     const userId = req.user.id;
 
-    const conversation = await db.conversation.findOne({
-      where: { conversationId },
+    const conversation = await db.Conversation.findOne({
+      where: { id: conversationId },
     });
 
     if (!conversation) {
@@ -73,9 +72,9 @@ export const checkGroupMembership = async (req, res, next) => {
         .json({ message: "Không tìm thấy cuộc trò chuyện" });
     }
 
-    const isMember = conversation.participants.some(
-      (p) => p.userId.toString() === userId.toString()
-    );
+    const isMember = await db.Participant.findOne({
+      where: [{ userId }, { conversationId }],
+    });
 
     if (!isMember) {
       return res
