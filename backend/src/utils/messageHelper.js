@@ -1,3 +1,5 @@
+import db from "../db/models/index.js";
+
 export const updateConversationAfterCreateMessage = async (
   conversation,
   message,
@@ -27,7 +29,7 @@ export const updateConversationAfterCreateMessage = async (
   });
 
   // Cập nhật conversation
-  await conversation.update(
+  await db.Conversation.update(
     {
       lastMessageAt: message.createdAt,
       lastMessageContent: message.content,
@@ -35,6 +37,18 @@ export const updateConversationAfterCreateMessage = async (
       lastMessageCreatedAt: message.createdAt,
       unreadCounts,
     },
-    { transaction }
+    { where: { id: conversation.id }, transaction }
   );
+};
+
+export const emitNewMessage = (io, conversation, message) => {
+  io.to(conversation.id.toString()).emit("new-message", {
+    message,
+    conversation: {
+      id: conversation.id,
+      lastMessageContent: conversation.lastMessageContent,
+      lastMessageAt: conversation.lastMessageAt,
+    },
+    unreadCounts: conversation.unreadCounts,
+  });
 };

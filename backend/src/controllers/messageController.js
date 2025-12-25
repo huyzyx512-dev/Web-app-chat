@@ -1,5 +1,9 @@
 import db from "../db/models/index.js";
-import { updateConversationAfterCreateMessage } from "../utils/messageHelper.js";
+import {
+  emitNewMessage,
+  updateConversationAfterCreateMessage,
+} from "../utils/messageHelper.js";
+import { io } from "../socket/index.js";
 
 export const sendDirectMessage = async (req, res) => {
   const t = await db.sequelize.transaction();
@@ -134,6 +138,8 @@ export const sendDirectMessage = async (req, res) => {
 
     await t.commit();
 
+    emitNewMessage(io, conversation, message);
+
     // === 6. Trả về tin nhắn + thông tin người gửi ===
     const messageWithSender = await db.Message.findByPk(message.id, {
       attributes: ["id", "content", "createdAt", "conversationId"],
@@ -208,6 +214,7 @@ export const sendGroupMessage = async (req, res) => {
 
     // 4. Commit
     await t.commit();
+    emitNewMessage(io, conversation, message);
 
     return res.status(201).json({ message });
   } catch (error) {

@@ -142,9 +142,7 @@ export const createConversation = async (req, res) => {
 
 export const getConversations = async (req, res) => {
   try {
-    //TODO: fix lỗi chưa lấy được thông tin người tham gia conversation
     const userId = req.user.id;
-    console.log("UserId: ", userId);
 
     const conversations = await db.Conversation.findAll({
       attributes: [
@@ -268,5 +266,20 @@ export const getMessages = async (req, res) => {
   } catch (error) {
     console.error("Lỗi xảy ra khi lấy messages: ", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const getUserConversationsForSocketIO = async (userId) => {
+  try {
+    const conversations = await db.Participant.findAll({
+      where: { userId },
+      attributes: ["conversationId"],
+      raw: true,
+      nest: true,
+    });
+    return conversations.map((c) => c.conversationId?.toString());
+  } catch (error) {
+    console.error("Lỗi khi fetch conversations: ", error);
+    return [];
   }
 };

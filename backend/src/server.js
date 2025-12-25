@@ -9,10 +9,12 @@ import conversationRoute from "./routes/conversationRoute.js";
 import pool from "./libs/db.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import { app, server} from "./socket/index.js";
+
+//TODO: tạo swagger api cho backend
 
 dotenv.config();
 
-const app = express();
 const PORT = process.env.PORT || 5001;
 
 // middleware
@@ -30,12 +32,11 @@ app.use("/api/message", protectedRoute, messageRoute);
 app.use("/api/conversation", protectedRoute, conversationRoute);
 
 // Connect DB
-
 await pool
   .getConnection()
   .then(() => {
     console.log(`Kết nối db thành công.`);
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server chạy trên công ${PORT}`);
     });
   })
